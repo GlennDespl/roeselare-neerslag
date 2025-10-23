@@ -31,8 +31,17 @@
             var regen = prompt("Geef de neerslag van gisteren in (mm):");
             if (regen != null && !isNaN(regen)) {
                 // Hier kun je data naar Google Sheet sturen via een web-app of Form submission
-                console.log("Datum:", new Date().toLocaleDateString(), "Lat:", e.latlng.lat, "Lng:", e.latlng.lng, "Neerslag:", regen, "mm");
-                alert("Bedankt! Je neerslag is geregistreerd.");
+                fetch("https://script.google.com/macros/s/AKfycbxNsWmyc9Oha_jfECuFsHmyNrwAlxfXufi2OdOmewjahq2MLQY3m-UyXjr_aDbzy63E/exec" + new Date().toLocaleDateString() + "&lat=" + e.latlng.lat + "&lng=" + e.latlng.lng + "&neerslag=" + regen)
+                .then(response => response.text())
+                .then(data => {
+                    alert("Bedankt! Je neerslag is geregistreerd.");
+                })
+                .catch(err => {
+                    alert("Er ging iets mis bij het verzenden. Probeer later opnieuw.");
+                    console.error(err);
+                    map.removeLayer(marker);
+                    marker = null;
+                });
             } else {
                 alert("Ongeldige invoer. Probeer opnieuw.");
                 map.removeLayer(marker);
@@ -45,3 +54,4 @@
   </script>
 </body>
 </html>
+
