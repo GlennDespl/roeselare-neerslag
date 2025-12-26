@@ -5,52 +5,80 @@
   <meta charset="utf-8" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    #map { height: 600px; width: 100%; }
+    body {
+      font-family: Arial, sans-serif;
+    }
+    #map {
+      height: 600px;
+      width: 100%;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
+
   <h2>Roeselare Neerslag – Geef je meting door</h2>
+  <p>Klik op de kaart en geef de neerslag van gisteren in (mm).</p>
+
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Maak de kaart aan, gecentreerd op Roeselare
+    // Kaart initialiseren
     var map = L.map('map').setView([50.9480, 3.1163], 12);
 
-    // Laag toevoegen (OpenStreetMap)
+    // OpenStreetMap laag
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
+      maxZoom: 19
     }).addTo(map);
 
-    var marker;
-    map.on('click', function(e) {
-        if (!marker) {
-            marker = L.marker(e.latlng).addTo(map);
+    var marker = null;
 
-            // Vraag neerslaghoeveelheid
-            var regen = prompt("Geef de neerslag van gisteren in (mm):");
-            if (regen != null && !isNaN(regen)) {
-                // Hier kun je data naar Google Sheet sturen via een web-app of Form submission
-                fetch("https://script.google.com/macros/s/AKfycbxNsWmyc9Oha_jfECuFsHmyNrwAlxfXufi2OdOmewjahq2MLQY3m-UyXjr_aDbzy63E/exec" + new Date().toLocaleDateString() + "&lat=" + e.latlng.lat + "&lng=" + e.latlng.lng + "&neerslag=" + regen)
-                .then(response => response.text())
-                .then(data => {
-                    alert("Bedankt! Je neerslag is geregistreerd.");
-                })
-                .catch(err => {
-                    alert("Er ging iets mis bij het verzenden. Probeer later opnieuw.");
-                    console.error(err);
-                    map.removeLayer(marker);
-                    marker = null;
-                });
-            } else {
-                alert("Ongeldige invoer. Probeer opnieuw.");
-                map.removeLayer(marker);
-                marker = null;
-            }
-        } else {
-            alert("Je kunt slechts één locatie per dag aangeven. Verplaats de bestaande marker indien nodig.");
-        }
+    map.on('click', function (e) {
+
+      if (marker) {
+        alert("Je kunt maar één meting per bezoek ingeven.");
+        return;
+      }
+
+      var regen = prompt("Geef de neerslag van gisteren in (mm):");
+
+      // Validatie
+      if (regen === null || regen === "" || isNaN(regen) || regen < 0 || regen > 200) {
+        alert("Ongeldige invoer. Geef een getal tussen 0 en 200 mm.");
+        return;
+      }
+
+      marker = L.marker(e.latlng).addTo(map);
+
+      // Datum in correct formaat
+      var datum = new Date().toISOString().split("T")[0];
+
+      // URL correct opbouwen
+      var url =
+        "https://script.google.com/macros/s/AKfycbxNsWmyc9Oha_jfECuFsHmyNrwAlxfXufi2OdOmewjahq2MLQY3m-UyXjr_aDbzy63E/exec"
+        + "?datum=" + encodeURIComponent(datum)
+        + "&lat=" + encodeURIComponent(e.latlng.lat)
+        + "&lng=" + encodeURIComponent(e.latlng.lng)
+        + "&neerslag=" + encodeURIComponent(regen);
+
+      // Debug (heel belangrijk)
+      console.log("VERSTUURDE URL:", url);
+
+      fetch(url)
+        .then(response => response.text())
+        .then(text => {
+          console.log("SERVER ANTWOORD:", text);
+          alert("Bedankt! Je neerslag is geregistreerd.");
+        })
+        .catch(error => {
+          console.error("FETCH ERROR:", error);
+          alert("Er ging iets mis bij het verzenden.");
+          map.removeLayer(marker);
+          marker = null;
+        });
     });
   </script>
+
 </body>
 </html>
