@@ -40,7 +40,7 @@
 
     // Functie om heatmap te laden vanaf Google Sheet (GET)
     function loadHeatmap() {
-      fetch("https://script.google.com/macros/s/JE_APP_SCRIPT_ID/exec") // vervang door jouw Web App URL
+      fetch("https://script.google.com/macros/s/AKfycbxNsWmyc9Oha_jfECuFsHmyNrwAlxfXufi2OdOmewjahq2MLQY3m-UyXjr_aDbzy63E/exec") // vervang door jouw Web App URL
         .then(response => response.json())
         .then(data => {
           var punten = data.map(d => [d.lat, d.lng, d.neerslag]);
@@ -72,7 +72,7 @@
       var datum = new Date().toISOString().split("T")[0];
 
       // Verstuur via POST zodat Apps Script doPost wordt aangeroepen
-      fetch("https://script.google.com/macros/s/JE_APP_SCRIPT_ID/exec", {
+      fetch("https://script.google.com/macros/s/AKfycbxNsWmyc9Oha_jfECuFsHmyNrwAlxfXufi2OdOmewjahq2MLQY3m-UyXjr_aDbzy63E/exec", {
         method: "POST",
         body: new URLSearchParams({
           datum: datum,
@@ -105,3 +105,4 @@
 
 </body>
 </html>
+
