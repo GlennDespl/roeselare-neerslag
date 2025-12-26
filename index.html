@@ -5,29 +5,43 @@
   <meta charset="utf-8" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    #map { height: 600px; width: 100%; }
+    body {
+      font-family: Arial, sans-serif;
+    }
+    #map {
+      height: 600px;
+      width: 100%;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
+
   <h2>Roeselare Neerslag – Geef je meting door</h2>
+  <p>Klik op de kaart en geef de neerslag van gisteren in (mm).</p>
+
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
   <script>
-    // Kaart aanmaken
+    // Kaart initialiseren
     var map = L.map('map').setView([50.9480, 3.1163], 12);
+
+    // OpenStreetMap laag
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
+      maxZoom: 19
     }).addTo(map);
 
-    // Heatmap layer
+    var marker = null;
+
+    // Heatmap layer aanmaken
     var heat = L.heatLayer([], {radius: 25, blur: 15, maxZoom: 17}).addTo(map);
 
-    // Functie om heatmap te laden
+    // Functie om heatmap te laden vanaf Google Sheet
     function loadHeatmap() {
-      fetch("https://script.google.com/macros/s/JE_APP_SCRIPT_ID/exec") // vervang met jouw Web App URL
-        .then(resp => resp.json())
+      fetch("https://script.google.com/macros/s/JE_APP_SCRIPT_ID/exec") // vervang door jouw Web App URL
+        .then(response => response.json())
         .then(data => {
           var punten = data.map(d => [d.lat, d.lng, d.neerslag]);
           heat.setLatLngs(punten);
@@ -35,46 +49,60 @@
         .catch(err => console.error("Kon data niet laden:", err));
     }
 
-    loadHeatmap(); // bij openen pagina
+    // Initial load van heatmap
+    loadHeatmap();
 
-    var marker;
-    map.on('click', function(e) {
-        if (!marker) {
-            marker = L.marker(e.latlng).addTo(map);
+    map.on('click', function (e) {
 
-            var regen = prompt("Geef de neerslag van gisteren in (mm):");
-            if (regen != null && !isNaN(regen)) {
-                var datum = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-                fetch("https://script.google.com/macros/s/JE_APP_SCRIPT_ID/exec?datum=" + datum +
-                      "&lat=" + e.latlng.lat +
-                      "&lng=" + e.latlng.lng +
-                      "&neerslag=" + regen)
-                  .then(response => response.text())
-                  .then(data => {
-                      if(data === "Success") {
-                          alert("Bedankt! Je neerslag is geregistreerd.");
-                          loadHeatmap(); // heatmap bijwerken
-                      } else {
-                          alert("Er ging iets mis: " + data);
-                          map.removeLayer(marker);
-                          marker = null;
-                      }
-                  })
-                  .catch(err => {
-                      alert("Er ging iets mis bij het verzenden. Probeer later opnieuw.");
-                      console.error(err);
-                      map.removeLayer(marker);
-                      marker = null;
-                  });
-            } else {
-                alert("Ongeldige invoer. Probeer opnieuw.");
-                map.removeLayer(marker);
-                marker = null;
-            }
-        } else {
-            alert("Je kunt slechts één locatie per dag aangeven. Verplaats de bestaande marker indien nodig.");
-        }
+      if (marker) {
+        alert("Je kunt maar één meting per bezoek ingeven.");
+        return;
+      }
+
+      var regen = prompt("Geef de neerslag van gisteren in (mm):");
+
+      // Validatie
+      if (regen === null || regen === "" || isNaN(regen) || regen < 0 || regen > 200) {
+        alert("Ongeldige invoer. Geef een getal tussen 0 en 200 mm.");
+        return;
+      }
+
+      marker = L.marker(e.latlng).addTo(map);
+
+      // Datum in correct formaat
+      var datum = new Date().toISOString().split("T")[0];
+
+      // URL correct opbouwen
+      var url =
+        "https://script.google.com/macros/s/JE_APP_SCRIPT_ID/exec"
+        + "?datum=" + encodeURIComponent(datum)
+        + "&lat=" + encodeURIComponent(e.latlng.lat)
+        + "&lng=" + encodeURIComponent(e.latlng.lng)
+        + "&neerslag=" + encodeURIComponent(regen);
+
+      console.log("VERSTUURDE URL:", url);
+
+      fetch(url)
+        .then(response => response.text())
+        .then(text => {
+          console.log("SERVER ANTWOORD:", text);
+          if (text === "Success") {
+            alert("Bedankt! Je neerslag is geregistreerd.");
+            loadHeatmap(); // heatmap bijwerken
+          } else {
+            alert("Er ging iets mis: " + text);
+            map.removeLayer(marker);
+            marker = null;
+          }
+        })
+        .catch(error => {
+          console.error("FETCH ERROR:", error);
+          alert("Er ging iets mis bij het verzenden.");
+          map.removeLayer(marker);
+          marker = null;
+        });
     });
   </script>
+
 </body>
 </html>
